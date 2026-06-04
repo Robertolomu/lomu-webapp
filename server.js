@@ -34,26 +34,15 @@ app.post('/api/chat', async (req, res) => {
   try {
     const records = await fetchSheetData();
     const tableText = formatDataForPrompt(records);
-
     const systemPrompt = `Eres el asistente de mantenimiento vehicular de la empresa LOMU (Transportes y Maquinarias).
 Respondes preguntas sobre el estado y programacion de mantenimientos de la flota.
 
-Datos actualizados de mantenimiento (columnas: Marca temporal | Placa | KM actual | Mantenimiento | Fecha estimada de proximo mantenimiento | KM proximo | Observacion):
+Datos actualizados:
 ${tableText}
 
-Reglas:
-- Responde siempre en espanol.
-- Se conciso y directo.
-- Busca la placa exacta (ej: ANG571, CBN246) en los datos.
-- Si hay multiples registros para una placa, muestralos todos.
-- Formatea las fechas de manera legible.
-- Si no encuentras la placa, dilo y lista las placas disponibles.
-- No inventes datos que no esten en la tabla.`;
+Reglas: responde en espanol, busca placa exacta, lista todos los registros, no inventes datos.`;
 
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-      systemInstruction: systemPrompt
-    });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash', systemInstruction: systemPrompt });
     const result = await model.generateContent(message);
     const reply = result.response.text();
     res.json({ reply });
@@ -64,4 +53,4 @@ Reglas:
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('LOMU Mantenimiento en puerto ' + PORT));
+app.listen(PORT, () => console.log('LOMU en puerto ' + PORT));
