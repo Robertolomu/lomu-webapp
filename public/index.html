@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LOMU Mantenimiento</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; height: 100dvh; display: flex; flex-direction: column; }
+    header { background: #1a1a2e; color: #fff; padding: 14px 20px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+    .logo { width: 40px; height: 40px; background: #e94560; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px; }
+    header h1 { font-size: 18px; font-weight: 700; }
+    header p { font-size: 12px; color: #aaa; margin-top: 1px; }
+    #chat { flex: 1; overflow-y: auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 12px; }
+    .msg { max-width: 80%; padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+    .msg.user { background: #e94560; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+    .msg.bot { background: #fff; color: #1a1a2e; align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .msg.bot.thinking { color: #999; font-style: italic; }
+    #input-area { background: #fff; padding: 12px 16px; display: flex; gap: 10px; align-items: flex-end; border-top: 1px solid #e0e0e0; }
+    #user-input { flex: 1; border: 1.5px solid #ddd; border-radius: 22px; padding: 10px 16px; font-size: 14px; resize: none; max-height: 120px; outline: none; transition: border-color 0.2s; font-family: inherit; }
+    #user-input:focus { border-color: #e94560; }
+    #send-btn { background: #e94560; color: #fff; border: none; border-radius: 50%; width: 44px; height: 44px; font-size: 20px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+    #send-btn:hover { background: #c73652; }
+    #send-btn:disabled { background: #ccc; cursor: not-allowed; }
+    .welcome { text-align: center; color: #aaa; font-size: 13px; margin: auto; padding: 20px; }
+    .welcome strong { color: #555; display: block; margin-bottom: 8px; font-size: 15px; }
+    @media (min-width: 640px) { #chat { padding: 24px; } .msg { max-width: 60%; } }
+  </style>
+</head>
+<body>
+<header>
+  <div class="logo">L</div>
+  <div><h1>LOMU Mantenimiento</h1><p>Transportes y Maquinarias</p></div>
+</header>
+<div id="chat">
+  <div class="welcome">
+    <strong>Hola! Soy tu asistente de mantenimiento.</strong>
+    Preguntame sobre cualquier vehiculo de la flota.<br/>
+    Ej: <em>"Cuando le toca mantenimiento al ANG571?"</em>
+  </div>
+</div>
+<div id="input-area">
+  <textarea id="user-input" rows="1" placeholder="Escribe tu pregunta..." maxlength="500"></textarea>
+  <button id="send-btn" title="Enviar">&#10148;</button>
+</div>
+<script>
+  const chat = document.getElementById('chat');
+  const input = document.getElementById('user-input');
+  const btn = document.getElementById('send-btn');
+  function addMsg(text, role) {
+    const div = document.createElement('div');
+    div.className = 'msg ' + role;
+    div.textContent = text;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+    return div;
+  }
+  async function sendMessage() {
+    const msg = input.value.trim();
+    if (!msg) return;
+    const welcome = chat.querySelector('.welcome');
+    if (welcome) welcome.remove();
+    addMsg(msg, 'user');
+    input.value = '';
+    input.style.height = 'auto';
+    btn.disabled = true;
+    const thinking = addMsg('Consultando datos...', 'bot thinking');
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg }),
+      });
+      const data = await res.json();
+      thinking.remove();
+      addMsg(data.reply || data.error || 'Sin respuesta.', 'bot');
+    } catch (e) {
+      thinking.remove();
+      addMsg('Error de conexion. Intenta nuevamente.', 'bot');
+    } finally {
+      btn.disabled = false;
+      input.focus();
+    }
+  }
+  btn.addEventListener('click', sendMessage);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+  input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = input.scrollHeight + 'px'; });
+</script>
+</body>
+</html>
