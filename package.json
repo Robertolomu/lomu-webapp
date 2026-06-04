@@ -1,0 +1,15 @@
+{
+  "name": "lomu-webapp",
+  "version": "1.0.0",
+  "description": "LOMU Mantenimiento Vehicular - Chat App",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "csv-parse": "^5.5.2",
+    "@anthropic-ai/sdk": "^0.20.0"
+  }
+}
