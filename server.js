@@ -10,8 +10,8 @@ app.use(express.static('public'));
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const SHEETS_CSV_URL = process.env.SHEETS_CSV_URL;
 
-if (!ANTHROPIC_API_KEY) throw new Error('Falta ANTHROPIC_API_KEY en variables de entorno');
-if (!SHEETS_CSV_URL) throw new Error('Falta SHEETS_CSV_URL en variables de entorno');
+if (!ANTHROPIC_API_KEY) throw new Error('Falta ANTHROPIC_API_KEY');
+if (!SHEETS_CSV_URL) throw new Error('Falta SHEETS_CSV_URL');
 
 const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 
@@ -43,20 +43,21 @@ ${tableText}
 Reglas:
 - Responde siempre en espanol.
 - Se conciso y directo.
-- Busca la placa exacta en los datos.
-- Formatea las fechas de manera legible.
-- Si no encuentras la placa, dilo claramente.
-- No inventes datos que no esten en la tabla.`;
+- Busca la placa exacta en los datos (busca coincidencias parciales tambien).
+- Formatea las fechas de manera legible (ej: 7 de junio de 2026).
+- Si no encuentras la placa, dilo claramente y lista las placas disponibles.
+- No inventes datos que no esten en la tabla.
+- Si hay multiples registros para una placa, muestralos todos.`;
 
     const response = await client.messages.create({
-      model: 'claude-opus-4-6',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
       system: systemPrompt,
       messages: [{ role: 'user', content: message }],
     });
     res.json({ reply: response.content[0].text });
   } catch (err) {
-    console.error(err);
+    console.error(err.message);
     res.status(500).json({ error: 'Error: ' + err.message });
   }
 });
