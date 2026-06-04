@@ -1,19 +1,19 @@
 const express = require('express');
 const axios = require('axios');
 const { parse } = require('csv-parse/sync');
-const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const app = express();
 app.use(express.json());
 app.use(express.static('public'));
 
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const SHEETS_CSV_URL = process.env.SHEETS_CSV_URL;
 
-if (!ANTHROPIC_API_KEY) throw new Error('Falta ANTHROPIC_API_KEY');
+if (!GEMINI_API_KEY) throw new Error('Falta GEMINI_API_KEY');
 if (!SHEETS_CSV_URL) throw new Error('Falta SHEETS_CSV_URL');
 
-const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 async function fetchSheetData() {
   const response = await axios.get(SHEETS_CSV_URL, { timeout: 10000 });
@@ -34,28 +34,29 @@ app.post('/api/chat', async (req, res) => {
   try {
     const records = await fetchSheetData();
     const tableText = formatDataForPrompt(records);
+
     const systemPrompt = `Eres el asistente de mantenimiento vehicular de la empresa LOMU (Transportes y Maquinarias).
 Respondes preguntas sobre el estado y programacion de mantenimientos de la flota.
 
-Datos actualizados de mantenimiento:
+Datos actualizados de mantenimiento (columnas: Marca temporal | Placa | KM actual | Mantenimiento | Fecha estimada de proximo mantenimiento | KM proximo | Observacion):
 ${tableText}
 
 Reglas:
 - Responde siempre en espanol.
 - Se conciso y directo.
-- Busca la placa exacta en los datos (busca coincidencias parciales tambien).
-- Formatea las fechas de manera legible (ej: 7 de junio de 2026).
-- Si no encuentras la placa, dilo claramente y lista las placas disponibles.
-- No inventes datos que no esten en la tabla.
-- Si hay multiples registros para una placa, muestralos todos.`;
+- Busca la placa exacta (ej: ANG571, CBN246) en los datos.
+- Si hay multiples registros para una placa, muestralos todos.
+- Formatea las fechas de manera legible.
+- Si no encuentras la placa, dilo y lista las placas disponibles.
+- No inventes datos que no esten en la tabla.`;
 
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: message }],
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      systemInstruction: systemPrompt
     });
-    res.json({ reply: response.content[0].text });
+    const result = await model.generateContent(message);
+    const reply = result.response.text();
+    res.json({ reply });
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ error: 'Error: ' + err.message });
